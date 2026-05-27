@@ -9,6 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check routes - add these here
+app.get('/', (req, res) => {
+  res.send('Backend is running');
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 const db = new sqlite3.Database('./database.db');
 
 db.serialize(() => {
@@ -36,43 +45,12 @@ db.serialize(() => {
     [process.env.ADMIN_USERNAME, hashed]);
 });
 
-function auth(req, res, next) {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({error: 'No token'});
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({error: 'Invalid token'});
-    req.user = user;
-    next();
-  });
-}
+// Your API routes should go here below
+// Example:
+// app.post('/api/login', (req, res) => { ... });
+// app.post('/api/apply', (req, res) => { ... });
 
-app.post('/api/login', (req, res) => {
-  const {username, password} = req.body;
-  db.get('SELECT * FROM admins WHERE username =?', [username], (err, admin) => {
-    if (!admin ||!bcrypt.compareSync(password, admin.password)) {
-      return res.status(401).json({error: 'Invalid credentials'});
-    }
-    const token = jwt.sign({id: admin.id}, process.env.JWT_SECRET, {expiresIn: '24h'});
-    res.json({token});
-  });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-app.post('/api/apply', (req, res) => {
-  const {name, email, phone, message, gender, nationality, selectedCelebrity} = req.body;
-  db.run('INSERT INTO applications (name,email,phone,message,gender,nationality,selectedCelebrity) VALUES (?,?,?,?,?,?,?)',
-    [name, email, phone, message, gender, nationality, selectedCelebrity],
-    function(err) {
-      if (err) return res.status(500).json({error: err.message});
-      res.json({success: true});
-    }
-  );
-});
-
-app.get('/api/applications', auth, (req, res) => {
-  db.all('SELECT * FROM applications ORDER BY submitted_at DESC', (err, rows) => {
-    if (err) return res.status(500).json({error: err.message});
-    res.json(rows);
-  });
-});
-
-app.listen(process.env.PORT, () => console.log('Server running on port', process.env.PORT));
