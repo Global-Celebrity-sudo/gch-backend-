@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health check routes - add these here
+// Health check routes
 app.get('/', (req, res) => {
   res.send('Backend is running');
 });
@@ -45,12 +45,35 @@ db.serialize(() => {
     [process.env.ADMIN_USERNAME, hashed]);
 });
 
-// Your API routes should go here below
-// Example:
-// app.post('/api/login', (req, res) => { ... });
-// app.post('/api/apply', (req, res) => { ... });
+// POST /api/apply - handle membership form submission
+app.post("/api/apply", (req, res) => {
+  try {
+    const { fullName, email, gender, phone, nationality, favoriteCelebrity, reason } = req.body;
+
+    if (!fullName || !email) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+
+    const sql = `INSERT INTO applications 
+      (name, email, phone, gender, nationality, selectedCelebrity, message) 
+      VALUES (?, ?, ?)`;
+    
+    db.run(sql, [fullName, email, phone, gender, nationality, favoriteCelebrity, reason], function(err) {
+      if (err) {
+        console.error("DB insert error:", err);
+        return res.status(500).json({ message: "Database error" });
+      }
+      console.log("Application saved with ID:", this.lastID);
+      res.json({ success: true, message: "Application submitted successfully!" });
+    });
+
+  } catch (err) {
+    console.error("Server error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
