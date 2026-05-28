@@ -64,13 +64,13 @@ app.post("/api/apply", (req, res) => {
   try {
     const { fullName, email, gender, phone, nationality, favoriteCelebrity, reason } = req.body;
 
-    if (!fullName ||!email) {
+    if (!fullName || !email) {
       return res.status(400).json({ message: "Name and email are required" });
     }
 
     const sql = `INSERT INTO applications
       (name, email, phone, gender, nationality, selectedCelebrity, message)
-      VALUES (?,?,?)`;
+      VALUES (?,?,?,?,?,?,?)`;
 
     db.run(sql, [fullName, email, phone, gender, nationality, favoriteCelebrity, reason], function(err) {
       if (err) {
